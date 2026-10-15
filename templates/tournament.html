@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf %}
+{% block title %}{{ t.title }}{% endblock %}
+{% block content %}
+<div class="stack">
+  <div class="card">
+    <div class="row between">
+      <span class="tag g-{{ t.game }}">{{ GAMES[t.game].name }}</span>
+      {% if t.status == 'finished' %}<span class="badge done">Yakunlangan</span>
+      {% elif t.status == 'running' %}<span class="badge live">Davom etmoqda</span>
+      {% elif t.registration_open %}<span class="badge open">Ro'yxat ochiq</span>
+      {% else %}<span class="badge closed">Ro'yxat yopiq</span>{% endif %}
+    </div>
+    <h1>{{ t.title }}</h1>
+    <p class="muted">{{ MODES[t.mode] }}{% if t.mode == 'team' %} · {{ t.team_size }} ga {{ t.team_size }}{% endif %} · {{ fmt_dt(t.start_at) }} (Toshkent)</p>
+    {% if t.description %}<p>{{ t.description }}</p>{% endif %}
+
+    {% if t.status == 'open' %}
+    <div class="countdown" data-start="{{ t.start_at.isoformat() }}+05:00">
+      <div><b data-u="d">0</b><span>kun</span></div>
+      <div><b data-u="h">0</b><span>soat</span></div>
+      <div><b data-u="m">0</b><span>daqiqa</span></div>
+      <div><b data-u="s">0</b><span>soniya</span></div>
+    </div>
+    {% endif %}
+
+    <progress max="{{ t.max_players }}" value="{{ entries|length }}"></progress>
+    <p class="small muted">{{ entries|length }} / {{ t.max_players }} o'yinchi
+      {% if t.mode == 'team' %}· jamoalar boshlanishda <b>random</b> tuziladi ({{ t.capacity }} jamoagacha){% endif %}</p>
+
+    <div class="stack">
+      {% if not current_user %}
+        <a class="btn block" href="{{ url_for('login') }}">Qatnashish uchun kiring</a>
+      {% elif joined and t.status == 'open' %}
+        <p class="flash ok">Siz ro'yxatdasiz. Boshlanishidan 30, 10 va 1 daqiqa oldin SMS keladi.</p>
+        <form method="post" action="{{ url_for('leave', tid=t.id) }}">{{ csrf() }}
+          <button class="btn ghost block" data-confirm="Ro'yxatdan chiqasizmi?">Ro'yxatdan chiqish</button></form>
+      {% elif joined %}
+        <p class="flash ok">Siz bu turnirda ishtirok etyapsiz.</p>
+      {% elif t.registration_open %}
+        <form method="post" action="{{ url_for('join', tid=t.id) }}">{{ csrf() }}<button class="btn block">Qatnashish</button></form>
+      {% elif t.status == 'open' %}
+        <p class="flash warn">Ro'yxat yopilgan yoki joylar to'lgan.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <section>
+    <h2>🏆 Mukofotlar</h2>
+    <div class="card scroll">
+      <table class="tbl">
+        <thead><tr><th>O'rin</th><th>Mukofot</th>{% if winners %}<th>G'olib</th>{% endif %}</tr></thead>
+        <tbody>
+        {% for p in t.prizes %}
+          <tr>
+            <td class="place p{{ p.place }}">{{ p.place }}-o'rin</td>
+            <td class="gold">{{ money(p.amount) }} {{ t.prize_unit }}</td>
+            {% if winners %}<td>{{ names.get(winners.get(p.place), '—') }}</td>{% endif %}
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      <p class="hint">Jami {{ t.prizes|length }} ta o'ringa mukofot beriladi.</p>
+    </div>
+  </section>
+
+  {% if rounds %}
+  <section>
+    <h2>Turnir jadvali</h2>
+    <div class="bracket">
+      {% for r in rounds %}
+      <div class="round">
+        <h4>{{ r.label }}</h4>
+        {% for m in r.matches %}
+        <div class="match">
+          <div class="slot {{ 'win' if m.winner_id and m.winner_id == m.a_id }} {{ 'lose' if m.winner_id and m.b_id and m.winner_id != m.a_id }}">{{ names.get(m.a_id, 'Kutilmoqda') }}</div>
+          <div class="slot {{ 'win' if m.winner_id and m.winner_id == m.b_id }} {{ 'lose' if m.winner_id and m.a_id and m.winner_id != m.b_id }}">{{ names.get(m.b_id, 'Bye' if m.round == 1 else 'Kutilmoqda') }}</div>
+        </div>
+        {% endfor %}
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% elif t.mode == 'team' and teams_sorted and not t.uses_bracket %}
+  <section>
+    <h2>Ball jadvali</h2>
+    <div class="card scroll"><table class="tbl">
+      <thead><tr><th>#</th><th>Jamoa</th><th class="r">Ball</th></tr></thead>
+      <tbody>{% for tm in teams_sorted %}<tr><td>{{ loop.index }}</td><td>{{ tm.name }}<div class="small muted">{{ members.get(tm.id, [])|join(', ') }}</div></td><td class="r">{{ tm.points }}</td></tr>{% endfor %}</tbody>
+    </table></div>
+  </section>
+  {% endif %}
+
+  {% if t.teams %}
+  <section>
+    <h2>Jamoalar</h2>
+    <div class="teamgrid">
+      {% for tm in t.teams %}
+      <div class="team"><b>{{ tm.name }}</b><ul>{% for n in members.get(tm.id, []) %}<li>{{ n }}</li>{% endfor %}</ul></div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  <section>
+    <h2>Ishtirokchilar ({{ entries|length }})</h2>
+    <div class="card">
+      {% if entries %}
+        <div class="row">{% for e in entries %}<span class="tag">{{ e.user.nickname }}</span>{% endfor %}</div>
+      {% else %}<p class="muted">Hali hech kim qo'shilmagan. Birinchi bo'ling!</p>{% endif %}
+    </div>
+  </section>
+</div>
+{% endblock %}
