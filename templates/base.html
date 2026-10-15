@@ -4,14 +4,15 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0b0f1a">
-  <title>{% block title %}Turnirlar{% endblock %} · ArenaUZ</title>
+  <title>{% block title %}Turnirlar{% endblock %} · NITRAGEN</title>
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
 {% from "_macros.html" import csrf %}
 <header class="top">
   <div class="wrap">
-    <a class="logo" href="{{ url_for('index') }}">Arena<b>UZ</b></a>
+    <a class="logo" href="{{ url_for('index') }}"><img src="{{ url_for('static', filename='logo.png') }}" alt="NITRAGEN" width="113" height="40"></a>
     <nav class="dnav">
       <a href="{{ url_for('tournaments') }}">Turnirlar</a>
       {% if current_user %}
@@ -33,7 +34,7 @@
   {% block content %}{% endblock %}
 </main>
 
-<footer>© ArenaUZ · Mas'uliyat bilan o'ynang</footer>
+<footer>© NITRAGEN · Mas'uliyat bilan o'ynang</footer>
 
 <nav class="bnav">
   <a href="{{ url_for('index') }}" class="{{ 'on' if request.endpoint == 'index' }}"><span>🏠</span>Bosh</a>
