@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf %}
+{% block title %}Profil{% endblock %}
+{% block content %}
+<div class="stack">
+  <div class="card">
+    <h1>{{ current_user.nickname }}</h1>
+    <p class="muted small">{{ current_user.email }} · {{ mask_phone(current_user.phone) }}</p>
+  </div>
+
+  <section>
+    <h2>Mening turnirlarim</h2>
+    {% if rows %}
+      <div class="grid">
+        {% for e, t in rows %}
+          <a class="card" href="{{ url_for('tournament', tid=t.id) }}">
+            <div class="row between"><b>{{ t.title }}</b><span class="tag g-{{ t.game }}">{{ GAMES[t.game].short }}</span></div>
+            <p class="muted small">{{ fmt_dt(t.start_at) }} · {{ {'open': "Ro'yxatda", 'running': 'Davom etmoqda', 'finished': 'Yakunlangan'}[t.status] }}</p>
+          </a>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="card muted center">Siz hali turnirga qo'shilmagansiz. <a href="{{ url_for('tournaments') }}">Turnirlar</a></div>
+    {% endif %}
+  </section>
+
+  <section>
+    <h2>Parolni o'zgartirish</h2>
+    <form class="card" method="post" action="{{ url_for('change_password') }}">
+      {{ csrf() }}
+      <label for="current">Joriy parol</label>
+      <input id="current" name="current" type="password" autocomplete="current-password" required>
+      <label for="new">Yangi parol</label>
+      <input id="new" name="new" type="password" autocomplete="new-password" minlength="8" required>
+      <br><button class="btn">Saqlash</button>
+    </form>
+  </section>
+
+  <form method="post" action="{{ url_for('logout') }}">{{ csrf() }}<button class="btn ghost block">Chiqish</button></form>
+</div>
+{% endblock %}

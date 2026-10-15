@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% from "_macros.html" import tcard %}
+{% block title %}Turnirlar{% endblock %}
+{% block content %}
+<h1>Turnirlar</h1>
+<div class="stack">
+  <div class="chips">
+    <a class="chip {{ 'on' if state == 'active' }}" href="{{ url_for('tournaments', game=game, mode=mode) }}">Faol</a>
+    <a class="chip {{ 'on' if state == 'finished' }}" href="{{ url_for('tournaments', game=game, mode=mode, state='finished') }}">Yakunlangan</a>
+  </div>
+  <div class="chips">
+    <a class="chip {{ 'on' if not game }}" href="{{ url_for('tournaments', mode=mode, state=state) }}">Hammasi</a>
+    {% for k, v in GAMES.items() %}<a class="chip {{ 'on' if game == k }}" href="{{ url_for('tournaments', game=k, mode=mode, state=state) }}">{{ v.short }}</a>{% endfor %}
+    <a class="chip {{ 'on' if mode == 'pvp' }}" href="{{ url_for('tournaments', game=game, mode='pvp', state=state) }}">PvP</a>
+    <a class="chip {{ 'on' if mode == 'team' }}" href="{{ url_for('tournaments', game=game, mode='team', state=state) }}">Jamoaviy</a>
+  </div>
+  {% if items %}
+    <div class="grid c2">{% for t in items %}{{ tcard(t) }}{% endfor %}</div>
+  {% else %}
+    <div class="card muted center">Turnir topilmadi.</div>
+  {% endif %}
+</div>
+{% endblock %}

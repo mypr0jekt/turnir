@@ -1,0 +1,21 @@
+{% macro csrf() %}<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">{% endmacro %}
+
+{% macro tcard(t) %}
+{% set top = t.prizes[0] if t.prizes else none %}
+<a class="card tcard g-{{ t.game }}" href="{{ url_for('tournament', tid=t.id) }}">
+  <div class="row between">
+    <span class="tag g-{{ t.game }}">{{ GAMES[t.game].short }}</span>
+    {% if t.status == 'finished' %}<span class="badge done">Yakunlangan</span>
+    {% elif t.status == 'running' %}<span class="badge live">Davom etmoqda</span>
+    {% elif t.registration_open %}<span class="badge open">Ro'yxat ochiq</span>
+    {% else %}<span class="badge closed">Ro'yxat yopiq</span>{% endif %}
+  </div>
+  <h3>{{ t.title }}</h3>
+  <p class="muted small">{{ MODES[t.mode] }} · {{ fmt_dt(t.start_at) }}</p>
+  <progress max="{{ t.max_players }}" value="{{ t.entry_count }}"></progress>
+  <div class="row between small">
+    <span class="muted">{{ t.entry_count }}/{{ t.max_players }} o'yinchi</span>
+    {% if top %}<span class="gold">🏆 {{ money(top.amount) }} {{ t.prize_unit }}</span>{% endif %}
+  </div>
+</a>
+{% endmacro %}

@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf %}
+{% block title %}Yangi turnir{% endblock %}
+{% block content %}
+<div class="card form-card">
+  <h1>Yangi turnir</h1>
+  <form method="post" novalidate>
+    {{ csrf() }}
+    <label for="title">Turnir nomi</label>
+    <input id="title" name="title" maxlength="80" value="{{ form.get('title', '') }}" required>
+
+    <label for="game">O'yin</label>
+    <select id="game" name="game">
+      {% for k, v in GAMES.items() %}<option value="{{ k }}" {{ 'selected' if form.get('game') == k }}>{{ v.name }}</option>{% endfor %}
+    </select>
+
+    <label for="mode">Turnir turi</label>
+    <select id="mode" name="mode">
+      <option value="pvp" {{ 'selected' if form.get('mode') == 'pvp' }}>PvP — 1 ga 1 lobbi</option>
+      <option value="team" {{ 'selected' if form.get('mode') == 'team' }}>Jamoaviy — random jamoalar</option>
+    </select>
+
+    <label for="capacity">Sig'im</label>
+    <input id="capacity" name="capacity" type="number" inputmode="numeric" min="2" max="50" value="{{ form.get('capacity', '') }}" required>
+    <div class="hint" id="cap-hint"></div>
+
+    <label for="start_at">Boshlanish vaqti (Toshkent)</label>
+    <input id="start_at" name="start_at" type="datetime-local" value="{{ form.get('start_at', '') }}" required>
+
+    <label for="description">Qoidalar / izoh</label>
+    <textarea id="description" name="description" maxlength="2000">{{ form.get('description', '') }}</textarea>
+
+    <label for="prize_unit">Mukofot birligi</label>
+    <input id="prize_unit" name="prize_unit" maxlength="20" value="{{ form.get('prize_unit', "so'm") }}">
+    <div class="hint">Masalan: so'm, UC, olmos.</div>
+
+    <label>Mukofotlar (o'rin bo'yicha)</label>
+    <div id="prizes" data-unit="{{ form.get('prize_unit', "so'm") }}">
+      {% for a in form.getlist('prize_amount') %}
+        <div class="prize-row"><b>{{ loop.index }}-o'rin</b><input type="text" inputmode="numeric" name="prize_amount" value="{{ a }}" autocomplete="off"></div>
+      {% endfor %}
+    </div>
+    <div class="row"><br>
+      <button type="button" class="btn ghost sm" id="add-prize">+ O'rin qo'shish</button>
+      <button type="button" class="btn ghost sm" id="del-prize">− Olib tashlash</button>
+    </div>
+    <br><button class="btn block">Turnirni yaratish</button>
+  </form>
+</div>
+{% endblock %}

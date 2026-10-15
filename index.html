@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% from "_macros.html" import tcard %}
+{% block title %}Bosh sahifa{% endblock %}
+{% block content %}
+<div class="hero">
+  <h1>MLBB va PUBG Mobile turnirlari</h1>
+  <p>Ro'yxatdan o'ting, turnirga qo'shiling va mukofotlar uchun kuch sinashing. Boshlanishidan oldin SMS orqali eslatamiz.</p>
+  <div class="row">
+    <a class="btn" href="{{ url_for('tournaments') }}">Turnirlarni ko'rish</a>
+    {% if not current_user %}<a class="btn ghost" href="{{ url_for('register') }}">Ro'yxatdan o'tish</a>{% endif %}
+  </div>
+  <div class="stats">
+    <div class="stat"><b>{{ stats.players }}</b><span class="small muted">o'yinchi</span></div>
+    <div class="stat"><b>{{ stats.tournaments }}</b><span class="small muted">turnir</span></div>
+    <div class="stat"><b>{{ stats.finished }}</b><span class="small muted">yakunlangan</span></div>
+  </div>
+</div>
+
+<section>
+  <h2>O'yinlar</h2>
+  <div class="grid c2">
+    <a class="gamecard mlbb" href="{{ url_for('tournaments', game='mlbb') }}">
+      <h3>Mobile Legends: Bang Bang</h3>
+      <p class="muted small">PvP 1 ga 1 · 5 ga 5 jamoaviy (30 tagacha jamoa)</p>
+    </a>
+    <a class="gamecard pubg" href="{{ url_for('tournaments', game='pubg') }}">
+      <h3>PUBG Mobile</h3>
+      <p class="muted small">PvP 1 ga 1 · 4 talik jamoalar (80 o'yinchigacha)</p>
+    </a>
+  </div>
+</section>
+
+<section>
+  <h2>Yaqinlashayotgan turnirlar</h2>
+  {% if upcoming %}
+    <div class="grid c2">{% for t in upcoming %}{{ tcard(t) }}{% endfor %}</div>
+  {% else %}
+    <div class="card muted center">Hozircha turnirlar yo'q. Tez orada e'lon qilinadi.</div>
+  {% endif %}
+</section>
+
+<section>
+  <h2>Qanday ishtirok etiladi?</h2>
+  <div class="card">
+    <ol class="steps">
+      <li>Gmail, nikneym, telefon va parol bilan ro'yxatdan o'ting.</li>
+      <li>Turnir sahifasida mukofotlarni ko'ring va «Qatnashish» tugmasini bosing.</li>
+      <li>Boshlanishidan 30, 10 va 1 daqiqa oldin SMS keladi.</li>
+      <li>Jadval bo'yicha o'ynang — g'oliblar mukofot oladi!</li>
+    </ol>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Xato{% endblock %}
+{% block content %}
+<div class="card center form-card">
+  <h1>{{ code }}</h1>
+  <p class="muted">{{ msg }}</p><br>
+  <a class="btn" href="{{ url_for('index') }}">Bosh sahifa</a>
+</div>
+{% endblock %}

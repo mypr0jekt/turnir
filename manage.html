@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf %}
+{% block title %}{{ t.title }} · Admin{% endblock %}
+{% block content %}
+<div class="stack">
+  <div class="card">
+    <div class="row between">
+      <span class="tag g-{{ t.game }}">{{ GAMES[t.game].short }} · {{ MODES[t.mode] }}</span>
+      <span class="badge {{ {'open':'open','running':'live','finished':'done'}[t.status] }}">{{ t.status }}</span>
+    </div>
+    <h1>{{ t.title }}</h1>
+    <p class="muted small">{{ fmt_dt(t.start_at) }} · {{ entries|length }}/{{ t.max_players }} o'yinchi ·
+      SMS: 30 daq {{ '✅' if t.sent_30 else '⏳' }} · 10 daq {{ '✅' if t.sent_10 else '⏳' }} · 1 daq {{ '✅' if t.sent_1 else '⏳' }}</p>
+    <br>
+    <div class="row">
+      <a class="btn ghost sm" href="{{ url_for('tournament', tid=t.id) }}">Ommaviy sahifa</a>
+      {% if t.status == 'open' %}
+        <form class="inline" method="post" action="{{ url_for('admin_start', tid=t.id) }}">{{ csrf() }}
+          <button class="btn ok sm" data-confirm="Ro'yxat yopiladi{{ ', jamoalar random tuziladi' if t.mode == 'team' }} va turnir boshlanadi. Davom etasizmi?">▶ Turnirni boshlash</button></form>
+      {% endif %}
+      {% if t.status == 'running' and not t.uses_bracket %}
+        <form class="inline" method="post" action="{{ url_for('admin_finish', tid=t.id) }}">{{ csrf() }}
+          <button class="btn ok sm" data-confirm="Turnirni yakunlaysizmi?">🏁 Yakunlash</button></form>
+      {% endif %}
+      <form class="inline" method="post" action="{{ url_for('admin_delete', tid=t.id) }}">{{ csrf() }}
+        <button class="btn danger sm" data-confirm="Turnir butunlay o'chiriladi. Aniqmi?">O'chirish</button></form>
+    </div>
+  </div>
+
+  {% if rounds %}
+  <section>
+    <h2>Natijalarni kiritish</h2>
+    <p class="muted small">G'olib tugmasini bosing — u keyingi bosqichga o'tadi.</p><br>
+    <div class="bracket">
+      {% for r in rounds %}
+      <div class="round">
+        <h4>{{ r.label }}</h4>
+        {% for m in r.matches %}
+        <div class="match">
+          <div class="slot {{ 'win' if m.winner_id and m.winner_id == m.a_id }}">{{ names.get(m.a_id, 'Kutilmoqda') }}</div>
+          <div class="slot {{ 'win' if m.winner_id and m.winner_id == m.b_id }}">{{ names.get(m.b_id, 'Bye' if m.round == 1 else 'Kutilmoqda') }}</div>
+          {% if m.a_id and m.b_id and t.status != 'open' and (t.status == 'running' or m.round == t.rounds) %}
+          <div class="pick">
+            <form method="post" action="{{ url_for('admin_match_winner', mid=m.id) }}">{{ csrf() }}<input type="hidden" name="winner_id" value="{{ m.a_id }}"><button>① g'olib</button></form>
+            <form method="post" action="{{ url_for('admin_match_winner', mid=m.id) }}">{{ csrf() }}<input type="hidden" name="winner_id" value="{{ m.b_id }}"><button>② g'olib</button></form>
+          </div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  {% if t.status != 'open' and t.teams and not t.uses_bracket %}
+  <section>
+    <h2>Ball jadvali</h2>
+    <form class="card scroll" method="post" action="{{ url_for('admin_points', tid=t.id) }}">
+      {{ csrf() }}
+      <table class="tbl">
+        <thead><tr><th>Jamoa</th><th class="r">Ball</th></tr></thead>
+        <tbody>
+        {% for tm in teams_sorted %}
+          <tr><td>{{ tm.name }}<div class="small muted">{{ members.get(tm.id, [])|join(', ') }}</div></td>
+          <td class="r">{% if t.status == 'running' %}<input class="pts" name="points_{{ tm.id }}" type="number" inputmode="numeric" min="0" value="{{ tm.points }}">{% else %}{{ tm.points }}{% endif %}</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      {% if t.status == 'running' %}<br><button class="btn sm">Ballarni saqlash</button>{% endif %}
+    </form>
+  </section>
+  {% endif %}
+
+  {% if t.status == 'finished' and t.uses_bracket and t.prizes|length > 2 %}
+  <section>
+    <h2>3+ o'rinlarni belgilash</h2>
+    <form class="card" method="post" action="{{ url_for('admin_placements', tid=t.id) }}">
+      {{ csrf() }}
+      {% for p in t.prizes if p.place >= 3 %}
+        <label for="place_{{ p.place }}">{{ p.place }}-o'rin ({{ money(p.amount) }} {{ t.prize_unit }})</label>
+        <select id="place_{{ p.place }}" name="place_{{ p.place }}">
+          <option value="">—</option>
+          {% for rid, nm in names.items() %}<option value="{{ rid }}" {{ 'selected' if winners.get(p.place) == rid }}>{{ nm }}</option>{% endfor %}
+        </select>
+      {% endfor %}
+      <br><button class="btn sm">Saqlash</button>
+    </form>
+  </section>
+  {% endif %}
+
+  {% if t.teams %}
+  <section>
+    <h2>Jamoalar</h2>
+    <div class="teamgrid">{% for tm in t.teams %}<div class="team"><b>{{ tm.name }}</b><ul>{% for n in members.get(tm.id, []) %}<li>{{ n }}</li>{% endfor %}</ul></div>{% endfor %}</div>
+  </section>
+  {% endif %}
+
+  <section>
+    <h2>Ishtirokchilar ({{ entries|length }})</h2>
+    <div class="card scroll">
+      <table class="tbl">
+        <thead><tr><th>Nikneym</th><th>Telefon</th>{% if t.status == 'open' %}<th></th>{% endif %}</tr></thead>
+        <tbody>
+        {% for e in entries %}
+          <tr><td>{{ e.user.nickname }}</td><td class="muted">{{ mask_phone(e.user.phone) }}</td>
+          {% if t.status == 'open' %}<td class="r"><form method="post" action="{{ url_for('admin_kick', tid=t.id, uid=e.user_id) }}">{{ csrf() }}<button class="btn danger sm" data-confirm="{{ e.user.nickname }} olib tashlansinmi?">✕</button></form></td>{% endif %}</tr>
+        {% else %}
+          <tr><td colspan="3" class="muted">Hali ishtirokchi yo'q.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}
