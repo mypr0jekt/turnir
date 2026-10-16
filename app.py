@@ -154,6 +154,8 @@ class Entry(db.Model):
     tournament_id = db.Column(db.Integer, db.ForeignKey("tournament.id"), nullable=False, index=True)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
     team_id = db.Column(db.Integer, db.ForeignKey("team.id"))
+    game_id = db.Column(db.String(40))  # o'yindagi ID (MLBB: User ID, PUBG: Player ID)
+    zone_id = db.Column(db.String(10))  # faqat MLBB: server (zone) ID
     created_at = db.Column(db.DateTime, default=now, nullable=False)
     user = db.relationship("User")
 
@@ -215,6 +217,30 @@ def validate_password(pw):
     if not re.search(r"[A-Za-z]", pw) or not re.search(r"\d", pw):
         return "Parolda harf ham, raqam ham bo'lishi kerak."
     return None
+
+
+def validate_game_ids(game, gid, zone):
+    """O'yin ID (va MLBB uchun server ID) ni tekshiradi. (gid, zone, xato) qaytaradi."""
+    gid = re.sub(r"\s", "", gid or "")
+    zone = re.sub(r"\s", "", zone or "")
+    if not re.fullmatch(r"[0-9]+", gid):
+        return None, None, "O'yin ID faqat raqamlardan iborat bo'lsin."
+    if game == "mlbb":
+        if not (5 <= len(gid) <= 12):
+            return None, None, "MLBB ID 5–12 ta raqamdan iborat bo'lsin."
+        if not re.fullmatch(r"[0-9]{1,6}", zone):
+            return None, None, "Server (Zone) ID ni kiriting, masalan: 2345."
+        return gid, zone, None
+    if not (6 <= len(gid) <= 14):
+        return None, None, "PUBG ID 6–14 ta raqamdan iborat bo'lsin."
+    return gid, "", None
+
+
+def game_id_taken(t, gid, zone, exclude_entry_id=None):
+    q = Entry.query.filter_by(tournament_id=t.id, game_id=gid, zone_id=zone)
+    if exclude_entry_id:
+        q = q.filter(Entry.id != exclude_entry_id)
+    return q.first() is not None
 
 
 def fmt_dt(dt):
@@ -463,7 +489,8 @@ def tournaments():
 def tournament(tid):
     t = db.get_or_404(Tournament, tid)
     entries = Entry.query.filter_by(tournament_id=t.id).order_by(Entry.created_at).all()
-    joined = bool(g.user and any(e.user_id == g.user.id for e in entries))
+    my_entry = next((e for e in entries if g.user and e.user_id == g.user.id), None)
+    joined = my_entry is not None
     names = build_names(t)
     members = {}
     for e in entries:
@@ -474,6 +501,7 @@ def tournament(tid):
         t=t,
         entries=entries,
         joined=joined,
+        my_entry=my_entry,
         names=names,
         members=members,
         rounds=build_rounds(t),
@@ -492,12 +520,39 @@ def join(tid):
     if Entry.query.filter_by(tournament_id=t.id, user_id=g.user.id).first():
         flash("Siz allaqachon ro'yxatdasiz.", "warn")
         return redirect(url_for("tournament", tid=tid))
-    db.session.add(Entry(tournament_id=t.id, user_id=g.user.id))
+    gid, zone, err = validate_game_ids(t.game, request.form.get("game_id"), request.form.get("zone_id"))
+    if err:
+        flash(err, "error")
+        return redirect(url_for("tournament", tid=tid))
+    if game_id_taken(t, gid, zone):
+        flash("Bu o'yin ID bilan boshqa ishtirokchi allaqachon ro'yxatdan o'tgan.", "error")
+        return redirect(url_for("tournament", tid=tid))
+    db.session.add(Entry(tournament_id=t.id, user_id=g.user.id, game_id=gid, zone_id=zone))
     try:
         db.session.commit()
         flash("Ro'yxatdan o'tdingiz! Boshlanishidan oldin SMS orqali eslatamiz.", "ok")
     except IntegrityError:
         db.session.rollback()
+    return redirect(url_for("tournament", tid=tid))
+
+
+@app.post("/tournament/<int:tid>/gameid")
+@login_required
+def update_game_id(tid):
+    t = db.get_or_404(Tournament, tid)
+    e = Entry.query.filter_by(tournament_id=t.id, user_id=g.user.id).first_or_404()
+    if t.status != "open":
+        flash("Turnir boshlangan, ID ni o'zgartirib bo'lmaydi.", "error")
+        return redirect(url_for("tournament", tid=tid))
+    gid, zone, err = validate_game_ids(t.game, request.form.get("game_id"), request.form.get("zone_id"))
+    if err:
+        flash(err, "error")
+    elif game_id_taken(t, gid, zone, exclude_entry_id=e.id):
+        flash("Bu o'yin ID bilan boshqa ishtirokchi ro'yxatdan o'tgan.", "error")
+    else:
+        e.game_id, e.zone_id = gid, zone
+        db.session.commit()
+        flash("O'yin ID saqlandi.", "ok")
     return redirect(url_for("tournament", tid=tid))
 
 
@@ -713,7 +768,8 @@ def admin_manage(tid):
     members = {}
     for e in entries:
         if e.team_id:
-            members.setdefault(e.team_id, []).append(e.user.nickname)
+            label = e.user.nickname + (f" · {e.game_id}" if e.game_id else "")
+            members.setdefault(e.team_id, []).append(label)
     return render_template(
         "admin/manage.html", t=t, entries=entries, names=names, members=members,
         rounds=build_rounds(t), winners=standings_map(t),
@@ -902,8 +958,21 @@ def seed_admin():
         log.info("Admin yaratildi: %s", email)
 
 
+def ensure_columns():
+    """Eski bazada yangi ustunlar bo'lmasa qo'shadi (create_all mavjud jadvalni o'zgartirmaydi)."""
+    from sqlalchemy import inspect, text
+
+    cols = {c["name"] for c in inspect(db.engine).get_columns("entry")}
+    with db.engine.begin() as conn:
+        if "game_id" not in cols:
+            conn.execute(text("ALTER TABLE entry ADD COLUMN game_id VARCHAR(40)"))
+        if "zone_id" not in cols:
+            conn.execute(text("ALTER TABLE entry ADD COLUMN zone_id VARCHAR(10)"))
+
+
 with app.app_context():
     db.create_all()
+    ensure_columns()
     seed_admin()
 
 
