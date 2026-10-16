@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Admin{% endblock %}
+{% block content %}
+<div class="stack">
+  <div class="row between">
+    <h1>Admin panel</h1>
+    <a class="btn" href="{{ url_for('admin_new') }}">+ Yangi turnir</a>
+  </div>
+  <p class="muted small">{{ users }} ta foydalanuvchi · {{ items|length }} ta turnir</p>
+  {% if items %}
+  <div class="grid c2">
+    {% for t in items %}
+      <div class="card">
+        <div class="row between"><span class="tag g-{{ t.game }}">{{ GAMES[t.game].short }}</span><span class="small muted">{{ t.status }}</span></div>
+        <h3>{{ t.title }}</h3>
+        <p class="muted small">{{ MODES[t.mode] }} · {{ fmt_dt(t.start_at) }} · {{ t.entry_count }}/{{ t.max_players }}</p>
+        <br><a class="btn sm" href="{{ url_for('admin_manage', tid=t.id) }}">Boshqarish</a>
+      </div>
+    {% endfor %}
+  </div>
+  {% else %}<div class="card muted center">Turnir yo'q. Birinchisini yarating.</div>{% endif %}
+</div>
+{% endblock %}
