@@ -100,13 +100,13 @@
     <h2>Ishtirokchilar ({{ entries|length }})</h2>
     <div class="card scroll">
       <table class="tbl">
-        <thead><tr><th>Nikneym</th><th>Telefon</th>{% if t.status == 'open' %}<th></th>{% endif %}</tr></thead>
+        <thead><tr><th>Nikneym</th><th>O'yin ID</th><th>Telefon</th>{% if t.status == 'open' %}<th></th>{% endif %}</tr></thead>
         <tbody>
         {% for e in entries %}
-          <tr><td>{{ e.user.nickname }}</td><td class="muted">{{ mask_phone(e.user.phone) }}</td>
+          <tr><td>{{ e.user.nickname }}</td><td>{% if e.game_id %}<b>{{ e.game_id }}</b>{% if e.zone_id %} ({{ e.zone_id }}){% endif %}{% else %}<span class="muted">—</span>{% endif %}</td><td class="muted">{{ mask_phone(e.user.phone) }}</td>
           {% if t.status == 'open' %}<td class="r"><form method="post" action="{{ url_for('admin_kick', tid=t.id, uid=e.user_id) }}">{{ csrf() }}<button class="btn danger sm" data-confirm="{{ e.user.nickname }} olib tashlansinmi?">✕</button></form></td>{% endif %}</tr>
         {% else %}
-          <tr><td colspan="3" class="muted">Hali ishtirokchi yo'q.</td></tr>
+          <tr><td colspan="4" class="muted">Hali ishtirokchi yo'q.</td></tr>
         {% endfor %}
         </tbody>
       </table>

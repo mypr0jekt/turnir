@@ -33,12 +33,42 @@
         <a class="btn block" href="{{ url_for('login') }}">Qatnashish uchun kiring</a>
       {% elif joined and t.status == 'open' %}
         <p class="flash ok">Siz ro'yxatdasiz. Boshlanishidan 30, 10 va 1 daqiqa oldin SMS keladi.</p>
+        {% if my_entry and my_entry.game_id %}
+          <p class="small muted">Sizning o'yin ID: <b>{{ my_entry.game_id }}{% if my_entry.zone_id %} ({{ my_entry.zone_id }}){% endif %}</b></p>
+        {% else %}
+          <p class="flash warn">O'yin ID kiritilmagan. Pastda kiriting, aks holda sizni lobbiga qo'sha olmaymiz.</p>
+        {% endif %}
+        <details {{ 'open' if not (my_entry and my_entry.game_id) }}>
+          <summary class="small muted">O'yin ID ni {{ "o'zgartirish" if my_entry and my_entry.game_id else 'kiritish' }}</summary>
+          <form method="post" action="{{ url_for('update_game_id', tid=t.id) }}">
+            {{ csrf() }}
+            <label for="game_id2">{{ GAMES[t.game].short }} ID</label>
+            <input id="game_id2" name="game_id" inputmode="numeric" autocomplete="off" required value="{{ my_entry.game_id if my_entry and my_entry.game_id else '' }}">
+            {% if t.game == 'mlbb' %}
+              <label for="zone_id2">Server (Zone) ID</label>
+              <input id="zone_id2" name="zone_id" inputmode="numeric" autocomplete="off" required value="{{ my_entry.zone_id if my_entry and my_entry.zone_id else '' }}">
+            {% endif %}
+            <br><button class="btn sm">Saqlash</button>
+          </form>
+        </details>
         <form method="post" action="{{ url_for('leave', tid=t.id) }}">{{ csrf() }}
           <button class="btn ghost block" data-confirm="Ro'yxatdan chiqasizmi?">Ro'yxatdan chiqish</button></form>
       {% elif joined %}
         <p class="flash ok">Siz bu turnirda ishtirok etyapsiz.</p>
       {% elif t.registration_open %}
-        <form method="post" action="{{ url_for('join', tid=t.id) }}">{{ csrf() }}<button class="btn block">Qatnashish</button></form>
+        <form method="post" action="{{ url_for('join', tid=t.id) }}">
+          {{ csrf() }}
+          <label for="game_id">{{ GAMES[t.game].short }} o'yin ID</label>
+          <input id="game_id" name="game_id" inputmode="numeric" autocomplete="off" placeholder="Masalan: 123456789" required>
+          <div class="hint">O'yin ichida profilingizdan ID raqamini ko'ring. Faqat raqamlar.</div>
+          {% if t.game == 'mlbb' %}
+            <label for="zone_id">Server (Zone) ID</label>
+            <input id="zone_id" name="zone_id" inputmode="numeric" autocomplete="off" placeholder="Masalan: 2345" required>
+            <div class="hint">MLBB'da ID yonidagi qavs ichidagi raqam.</div>
+          {% endif %}
+          <div class="hint">ID faqat tashkilotchiga ko'rinadi, boshqalarga ko'rsatilmaydi.</div>
+          <br><button class="btn block">Qatnashish</button>
+        </form>
       {% elif t.status == 'open' %}
         <p class="flash warn">Ro'yxat yopilgan yoki joylar to'lgan.</p>
       {% endif %}
