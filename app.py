@@ -257,9 +257,13 @@ def load_user():
     g.user = db.session.get(User, uid) if uid else None
 
 
+# Global qilib beramiz: import qilingan makrolar (masalan turnir kartochkasi) ham ko'ra oladi
+app.jinja_env.globals.update(GAMES=GAMES, MODES=MODES, fmt_dt=fmt_dt, money=money, mask_phone=mask_phone)
+
+
 @app.context_processor
 def inject():
-    return dict(current_user=g.get("user"), GAMES=GAMES, MODES=MODES, fmt_dt=fmt_dt, money=money, mask_phone=mask_phone)
+    return dict(current_user=g.get("user"))
 
 
 def login_required(fn):
