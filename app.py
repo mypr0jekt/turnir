@@ -65,12 +65,20 @@ def _secret_key():
 
 
 app = Flask(__name__)
-db_url = os.environ.get("DATABASE_URL", "sqlite:///" + os.path.join(BASE_DIR, "arena.db"))
-if db_url.startswith("postgres://"):
-    db_url = db_url.replace("postgres://", "postgresql://", 1)
+db_url = os.environ.get("DATABASE_URL", "").strip() or "sqlite:///" + os.path.join(BASE_DIR, "arena.db")
+engine_options = {}
+if db_url.startswith(("postgres://", "postgresql://", "postgresql+psycopg2://")):
+    # yangi SQLAlchemy uchun psycopg (3-versiya) drayveri
+    db_url = "postgresql+psycopg://" + db_url.split("://", 1)[1]
+    engine_options = {
+        "pool_pre_ping": True,  # Supabase uzib qo'ygan ulanishni o'zi tiklaydi
+        "pool_recycle": 280,
+        "connect_args": {"prepare_threshold": None},
+    }
 app.config.update(
     SECRET_KEY=_secret_key(),
     SQLALCHEMY_DATABASE_URI=db_url,
+    SQLALCHEMY_ENGINE_OPTIONS=engine_options,
     SQLALCHEMY_TRACK_MODIFICATIONS=False,
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
